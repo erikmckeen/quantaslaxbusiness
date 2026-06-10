@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<title>Kiosk Home</title>
+
+<style>
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: #000;
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+    touch-action: manipulation;
+}
+
+.screen {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.title {
+    font-size: 72px;
+    font-weight: bold;
+    margin-bottom: 80px;
+}
+
+button {
+    width: 700px;
+    max-width: 85vw;
+    height: 180px;
+    font-size: 48px;
+    font-weight: bold;
+    border: none;
+    border-radius: 24px;
+    margin: 25px;
+    cursor: pointer;
+}
+
+.primary {
+    background: #ffffff;
+    color: #000000;
+}
+
+.secondary {
+    background: #444444;
+    color: #ffffff;
+}
+</style>
+</head>
+
+<body>
+
+<!-- Landing Screen -->
+<div id="home" class="screen">
+    <div class="title">Welcome</div>
+
+    <button class="primary" onclick="showMenu()">
+        Touch to Start
+    </button>
+</div>
+
+<!-- Menu Screen -->
+<div id="menu" class="screen" style="display:none;">
+    <div class="title">Please Select</div>
+
+    <button class="primary" onclick="openWebsite()">
+        Website
+    </button>
+
+    <button class="secondary" onclick="launchMapal()">
+        Mapal One
+    </button>
+</div>
+
+<script>
+function showMenu() {
+    document.getElementById("home").style.display = "none";
+    document.getElementById("menu").style.display = "flex";
+}
+
+function openWebsite() {
+    window.location.href = "https://ai-hospitality-companion-v-f-sl-for-demo-anushrisemlyon.replit.app";
+}
+
+function launchMapal() {
+    fully.startApplication("com.mapal_os.mapalone");
+}
+</script>
+
+</body>
+</html>
