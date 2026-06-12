@@ -204,7 +204,8 @@ function launchMapal() {
 const fallbackWeatherLocation = {
     name: "LAX Weather",
     latitude: 33.9425,
-    longitude: -118.4081
+    longitude: -118.4081,
+    isFallback: true
 };
 
 function getStoredWeatherLocation() {
@@ -238,7 +239,8 @@ function getDeviceWeatherLocation() {
                 const location = {
                     name: "Local Weather",
                     latitude: position.coords.latitude,
-                    longitude: position.coords.longitude
+                    longitude: position.coords.longitude,
+                    isFallback: false
                 };
 
                 saveWeatherLocation(location);
@@ -248,9 +250,9 @@ function getDeviceWeatherLocation() {
                 resolve(getStoredWeatherLocation() || fallbackWeatherLocation);
             },
             {
-                enableHighAccuracy: false,
-                timeout: 10000,
-                maximumAge: 3600000
+                enableHighAccuracy: true,
+                timeout: 20000,
+                maximumAge: 300000
             }
         );
     });
@@ -329,7 +331,7 @@ async function loadWeather() {
             pointsUrl
         );
 
-        if (!pointsResponse.ok && location !== fallbackWeatherLocation) {
+        if (!pointsResponse.ok && !location.isFallback) {
             location = fallbackWeatherLocation;
             pointsUrl =
                 `https://api.weather.gov/points/${location.latitude},${location.longitude}`;
@@ -344,7 +346,7 @@ async function loadWeather() {
         const pointsData = await pointsResponse.json();
         const relativeLocation = pointsData.properties.relativeLocation;
 
-        if (relativeLocation) {
+        if (relativeLocation && !location.isFallback) {
             const city = relativeLocation.properties.city;
             const state = relativeLocation.properties.state;
             document.getElementById("weatherLocation").innerHTML =
