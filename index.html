@@ -13,8 +13,8 @@ html, body {
     width: 100vw;
     height: 100vh;
     overflow: hidden;
-    background: #000;
-    color: #fff;
+    background: #ffffff;
+    color: #111111;
     font-family: Arial, Helvetica, sans-serif;
     touch-action: manipulation;
 }
@@ -27,6 +27,12 @@ html, body {
     justify-content: center;
     align-items: center;
     text-align: center;
+}
+
+.home-screen {
+    justify-content: flex-start;
+    box-sizing: border-box;
+    padding-top: 40px;
 }
 
 .title {
@@ -48,13 +54,97 @@ button {
 }
 
 .primary {
-    background: #ffffff;
-    color: #000000;
+    background: #111111;
+    color: #ffffff;
 }
 
 .secondary {
-    background: #444444;
+    background: #555555;
     color: #ffffff;
+}
+
+.weather {
+    position: static;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.weather-location {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 18px;
+    color: #444444;
+}
+
+.weather-main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 28px;
+    margin-bottom: 22px;
+}
+
+.weather-icon {
+    width: 96px;
+    height: 96px;
+}
+
+.weather-current {
+    font-size: 48px;
+    font-weight: bold;
+}
+
+.weather-detail {
+    font-size: 28px;
+    color: #444444;
+    margin-top: 8px;
+}
+
+.forecast {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    font-size: 24px;
+}
+
+.forecast-day {
+    min-width: 180px;
+}
+
+.forecast-label {
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.forecast-icon {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 6px;
+}
+
+.forecast-temp {
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.forecast-condition {
+    color: #444444;
+    margin-top: 4px;
+}
+
+.start-button {
+    margin-top: auto;
+    margin-left: 25px;
+    margin-right: 25px;
+    margin-bottom: 28px;
+}
+
+.brand-logo {
+    width: 420px;
+    max-width: 70vw;
+    height: auto;
+    margin-bottom: 48px;
 }
 </style>
 </head>
@@ -62,18 +152,32 @@ button {
 <body>
 
 <!-- Landing Screen -->
-<div id="home" class="screen">
-    <div class="title">Welcome</div>
+<div id="home" class="screen home-screen">
+    <div class="weather">
+        <div id="weatherLocation" class="weather-location">Local Weather</div>
 
-    <button class="primary" onclick="showMenu()">
+        <div class="weather-main">
+            <img id="currentWeatherIcon" class="weather-icon" alt="" style="display:none;">
+            <div>
+                <div id="currentWeather" class="weather-current">
+                    Loading...
+                </div>
+                <div id="currentWeatherDetail" class="weather-detail"></div>
+            </div>
+        </div>
+
+        <div id="forecast" class="forecast"></div>
+    </div>
+
+    <button class="primary start-button" onclick="showMenu()">
         Touch to Start
     </button>
+
+    <img class="brand-logo" src="sodexolivelogo.png" alt="Sodexo Live">
 </div>
 
 <!-- Menu Screen -->
 <div id="menu" class="screen" style="display:none;">
-    <div class="title">Please Select</div>
-
     <button class="primary" onclick="openWebsite()">
         Hospitality Assistant
     </button>
@@ -96,6 +200,205 @@ function openWebsite() {
 function launchMapal() {
     fully.startApplication("com.mapal_os.mapalone");
 }
+
+const fallbackWeatherLocation = {
+    name: "LAX Weather",
+    latitude: 33.9425,
+    longitude: -118.4081
+};
+
+function getStoredWeatherLocation() {
+    const savedLocation = localStorage.getItem("weatherLocation");
+
+    if (!savedLocation) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(savedLocation);
+    }
+    catch (e) {
+        return null;
+    }
+}
+
+function saveWeatherLocation(location) {
+    localStorage.setItem("weatherLocation", JSON.stringify(location));
+}
+
+function getDeviceWeatherLocation() {
+    return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+            resolve(getStoredWeatherLocation() || fallbackWeatherLocation);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const location = {
+                    name: "Local Weather",
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                };
+
+                saveWeatherLocation(location);
+                resolve(location);
+            },
+            () => {
+                resolve(getStoredWeatherLocation() || fallbackWeatherLocation);
+            },
+            {
+                enableHighAccuracy: false,
+                timeout: 10000,
+                maximumAge: 3600000
+            }
+        );
+    });
+}
+
+function getDayLabel(startTime, index) {
+    if (index === 0) {
+        return "Today";
+    }
+
+    if (index === 1) {
+        return "Tomorrow";
+    }
+
+    return new Date(startTime).toLocaleDateString("en-US", {
+        weekday: "short"
+    });
+}
+
+function groupHourlyForecast(periods) {
+    const days = [];
+    const daysByDate = {};
+
+    for (const period of periods) {
+        const dateKey = period.startTime.slice(0, 10);
+
+        if (!daysByDate[dateKey] && days.length >= 3) {
+            break;
+        }
+
+        if (!daysByDate[dateKey]) {
+            daysByDate[dateKey] = {
+                startTime: period.startTime,
+                high: period.temperature,
+                low: period.temperature,
+                conditions: {},
+                icons: {}
+            };
+
+            days.push(daysByDate[dateKey]);
+        }
+
+        const day = daysByDate[dateKey];
+
+        day.high = Math.max(day.high, period.temperature);
+        day.low = Math.min(day.low, period.temperature);
+        day.conditions[period.shortForecast] =
+            (day.conditions[period.shortForecast] || 0) + 1;
+        day.icons[period.shortForecast] = period.icon;
+    }
+
+    return days.slice(0, 3).map((day, index) => {
+        const condition = Object.keys(day.conditions).reduce((best, current) => {
+            return day.conditions[current] > day.conditions[best] ? current : best;
+        });
+
+        return {
+            label: getDayLabel(day.startTime, index),
+            high: day.high,
+            low: day.low,
+            condition: condition,
+            icon: day.icons[condition]
+        };
+    });
+}
+
+async function loadWeather() {
+    try {
+        let location = await getDeviceWeatherLocation();
+        let pointsUrl =
+            `https://api.weather.gov/points/${location.latitude},${location.longitude}`;
+
+        document.getElementById("weatherLocation").innerHTML = location.name;
+
+        let pointsResponse = await fetch(
+            pointsUrl
+        );
+
+        if (!pointsResponse.ok && location !== fallbackWeatherLocation) {
+            location = fallbackWeatherLocation;
+            pointsUrl =
+                `https://api.weather.gov/points/${location.latitude},${location.longitude}`;
+            document.getElementById("weatherLocation").innerHTML = location.name;
+            pointsResponse = await fetch(pointsUrl);
+        }
+
+        if (!pointsResponse.ok) {
+            throw new Error("Unable to load NWS point data");
+        }
+
+        const pointsData = await pointsResponse.json();
+        const relativeLocation = pointsData.properties.relativeLocation;
+
+        if (relativeLocation) {
+            const city = relativeLocation.properties.city;
+            const state = relativeLocation.properties.state;
+            document.getElementById("weatherLocation").innerHTML =
+                `${city}, ${state} Weather`;
+        }
+
+        const hourlyResponse = await fetch(pointsData.properties.forecastHourly);
+
+        if (!hourlyResponse.ok) {
+            throw new Error("Unable to load NWS hourly forecast");
+        }
+
+        const hourlyData = await hourlyResponse.json();
+        const periods = hourlyData.properties.periods;
+        const current = periods[0];
+        const currentIcon = document.getElementById("currentWeatherIcon");
+
+        currentIcon.src = current.icon;
+        currentIcon.style.display = "block";
+
+        document.getElementById("currentWeather").innerHTML =
+            `${current.temperature}&deg;F`;
+        document.getElementById("currentWeatherDetail").innerHTML =
+            `${current.shortForecast} &bull; Wind ${current.windSpeed}`;
+
+        let forecastHtml = "";
+        const forecastDays = groupHourlyForecast(periods);
+
+        for (const day of forecastDays) {
+            forecastHtml += `
+                <div class="forecast-day">
+                    <div class="forecast-label">${day.label}</div>
+                    <img class="forecast-icon" src="${day.icon}" alt="">
+                    <div class="forecast-temp">${day.high}&deg; / ${day.low}&deg;</div>
+                    <div class="forecast-condition">${day.condition}</div>
+                </div>
+            `;
+        }
+
+        document.getElementById("forecast").innerHTML = forecastHtml;
+    }
+    catch (e) {
+        document.getElementById("currentWeather").innerHTML =
+            "Weather unavailable";
+        document.getElementById("currentWeatherDetail").innerHTML = "";
+        document.getElementById("currentWeatherIcon").style.display = "none";
+        document.getElementById("forecast").innerHTML =
+            "Forecast unavailable";
+    }
+}
+
+loadWeather();
+
+setInterval(loadWeather, 900000);
 </script>
 
 </body>
