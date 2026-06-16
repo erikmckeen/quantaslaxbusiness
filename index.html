@@ -256,7 +256,8 @@ function getUrlWeatherLocation() {
         latitude: latitude,
         longitude: longitude,
         isFallback: false,
-        source: "url"
+        source: "url",
+        hasCustomName: params.has("weatherName")
     };
 }
 
@@ -445,7 +446,7 @@ async function loadWeather() {
         const pointsData = await pointsResponse.json();
         const relativeLocation = pointsData.properties.relativeLocation;
 
-        if (relativeLocation && !location.isFallback) {
+        if (relativeLocation && !location.isFallback && !location.hasCustomName) {
             const city = relativeLocation.properties.city;
             const state = relativeLocation.properties.state;
             document.getElementById("weatherLocation").innerHTML =
