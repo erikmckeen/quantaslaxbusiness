@@ -227,8 +227,48 @@ function saveWeatherLocation(location) {
     localStorage.setItem("weatherLocation", JSON.stringify(location));
 }
 
+function getFullyWeatherLocation() {
+    if (!window.fully || typeof fully.getLocation !== "function") {
+        return null;
+    }
+
+    try {
+        const fullyLocation = JSON.parse(fully.getLocation());
+        const latitude = Number(fullyLocation.latitude || fullyLocation.lat);
+        const longitude = Number(
+            fullyLocation.longitude || fullyLocation.lon || fullyLocation.lng
+        );
+
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+            return null;
+        }
+
+        if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            return null;
+        }
+
+        return {
+            name: "Local Weather",
+            latitude: latitude,
+            longitude: longitude,
+            isFallback: false
+        };
+    }
+    catch (e) {
+        return null;
+    }
+}
+
 function getDeviceWeatherLocation() {
     return new Promise((resolve) => {
+        const fullyLocation = getFullyWeatherLocation();
+
+        if (fullyLocation) {
+            saveWeatherLocation(fullyLocation);
+            resolve(fullyLocation);
+            return;
+        }
+
         if (!navigator.geolocation) {
             resolve(getStoredWeatherLocation() || fallbackWeatherLocation);
             return;
