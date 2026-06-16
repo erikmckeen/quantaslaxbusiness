@@ -238,10 +238,23 @@ function saveWeatherLocation(location) {
     localStorage.setItem("weatherLocation", JSON.stringify(location));
 }
 
-function getUrlWeatherLocation() {
+function getUrlParam(name) {
     const params = new URLSearchParams(window.location.search);
-    const latitude = Number(params.get("lat"));
-    const longitude = Number(params.get("lon") || params.get("lng"));
+    const requestedName = name.toLowerCase();
+
+    for (const [key, value] of params.entries()) {
+        if (key.toLowerCase() === requestedName) {
+            return value;
+        }
+    }
+
+    return null;
+}
+
+function getUrlWeatherLocation() {
+    const latitude = Number(getUrlParam("lat"));
+    const longitude = Number(getUrlParam("lon") || getUrlParam("lng"));
+    const customName = getUrlParam("weatherName") || getUrlParam("name");
 
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
         return null;
@@ -252,12 +265,12 @@ function getUrlWeatherLocation() {
     }
 
     return {
-        name: params.get("weatherName") || "Local Weather",
+        name: customName || "Local Weather",
         latitude: latitude,
         longitude: longitude,
         isFallback: false,
         source: "url",
-        hasCustomName: params.has("weatherName")
+        hasCustomName: Boolean(customName)
     };
 }
 
